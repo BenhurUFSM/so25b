@@ -1,0 +1,20 @@
+= so25b: Sistemas Operacionais, 2º semestre, 2025
+Benhur Stein <benhur+so25b@inf.ufsm.br>
+v0.0, 1ago25
+
+Página da disciplina de Sistemas Operacionais, segundo semestre de 2025.
+
+ELC1080, DLSC/CT/UFSM, turmas de CC e Sistemas
+
+--
+[no-bullet]
+* professor: Benhur Stein <benhur+so25b@inf.ufsm.br>
+* terças e quintas, 10h30, sala 1309, anexo C do CT
+--
+
+== Desenvolvimento da disciplina
+
+Os canais 
+
+
+
