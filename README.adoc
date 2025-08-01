@@ -1,4 +1,6 @@
 = so25b -- Sistemas Operacionais, 2º semestre, 2025
+Benhur Stein <benhur+so25b@gmail.com>
+v0.0, 1ago25
 
 Página oficial da disciplina
 
