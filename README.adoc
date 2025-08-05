@@ -4,7 +4,6 @@ v0.0, 1ago25
 
 Página da disciplina de Sistemas Operacionais, segundo semestre de 2025.
 
-.T
 [sidebar]
 [no-bullet]
 * ELC1080, DLSC/CT/UFSM, turmas de CC e Sistemas
@@ -33,7 +32,7 @@ A disciplina vai seguir de forma bastante próxima o assunto como ele é visto n
 
 ### Ementa
 
-Ver [https://www.ufsm.br/ementario/disciplinas/ELC1080/]aqui.
+Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 
 ### Aulas
 
@@ -45,7 +44,7 @@ A descrição de trabalhos aparecerá aqui.
 
 ### Dados individuais
 
-Dados sobre cada aluno estão na [https://docs.google.com/spreadsheets/d/1BUePsr6-BJ0bhQDHo9YakGwzyZHLKRrVycYc7bjFJ6w/edit?usp=sharing]planilha.
+Dados sobre cada aluno estão na https://docs.google.com/spreadsheets/d/1BUePsr6-BJ0bhQDHo9YakGwzyZHLKRrVycYc7bjFJ6w/edit?usp=sharing[planilha].
 
 
 
