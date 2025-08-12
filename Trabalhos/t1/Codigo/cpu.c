@@ -163,6 +163,7 @@ static bool poe_es(cpu_t *self, int dispositivo, int val)
 }
 
 // lê o opcode da instrução no PC
+// retorna true se ele pode ser executado, ou põe em erro o motivo de não poder
 static bool pega_opcode(cpu_t *self, int *popc)
 {
   return pega_mem(self, self->PC, popc);

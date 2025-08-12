@@ -8,11 +8,12 @@
 
 // simulador do relógio
 // dispositivo de E/S que registra a passagem do tempo
-// tem 2 dispositivos de leitura, um que retorna o número de instruções
-//   executadas e outro que retorna o tempo de execução do simulador
+// tem 2 dispositivos de leitura, para:
+// - retornar o número de instruções executadas
+// - retornar o tempo de execução do simulador
 
-// só tem 2 operações:
-// - passagem do tempo (deve ser chamada após a execução de cada instrução)
+// tem 2 operações:
+// - passagem do tempo (tictac), deve ser chamada após a execução de cada instrução
 // - leitura de dados, a ser usada pelo controlador de E/S para acessar este
 //   dispositivo
 
