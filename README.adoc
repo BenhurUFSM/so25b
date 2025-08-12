@@ -42,6 +42,7 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 
 |  1 | 5ago  | apresentação
 |  2 | 7ago  | introdução (1.1, 1.2)
+|  3 | 12ago | código do t1
 |===
 
 ### Avaliações
