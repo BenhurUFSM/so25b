@@ -36,11 +36,23 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 
 ### Aulas
 
-O assunto visto nas aulas aparecerá aqui.
+[%autowidth]
+|===
+|  # | data  | assunto
+
+|  1 | 5ago  | apresentação
+|  2 | 7ago  | introdução (1.1, 1.2)
+|===
 
 ### Avaliações
 
-A descrição de trabalhos aparecerá aqui.
+[%autowidth]
+|===
+| nome | data  | descrição
+
+| t1   |       | Familiarização com o link:Trabalhos/t1[código].
+| t2   |       | Processos, escalonamento
+|===
 
 ### Dados individuais
 
