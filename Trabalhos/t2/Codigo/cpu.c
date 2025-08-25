@@ -38,6 +38,9 @@ struct cpu_t {
   es_t *es;
   // identificação das instruções privilegiadas
   bool privilegiadas[N_OPCODE];
+  // função e argumento para implementar instrução CHAMAC
+  func_chamaC_t funcaoC;
+  void *argC;
 };
 
 
@@ -62,12 +65,15 @@ cpu_t *cpu_cria(mem_t *mem, es_t *es)
   self->erro = ERR_OK;
   self->complemento = 0;
   self->modo = supervisor;
+  self->funcaoC = NULL;
 
   // inicializa instruções privilegiadas
   memset(self->privilegiadas, 0, sizeof(self->privilegiadas)); // todos em false
   self->privilegiadas[PARA] = true;
   self->privilegiadas[LE] = true;
   self->privilegiadas[ESCR] = true;
+  self->privilegiadas[RETI] = true;
+  self->privilegiadas[CHAMAC] = true;
 
   return self;
 }
@@ -76,6 +82,12 @@ void cpu_destroi(cpu_t *self)
 {
   // quem criou memória e e/s que destrua!
   free(self);
+}
+
+void cpu_define_chamaC(cpu_t *self, func_chamaC_t funcaoC, void *argC)
+{
+  self->funcaoC = funcaoC;
+  self->argC = argC;
 }
 
 
@@ -415,6 +427,34 @@ static void op_ESCR(cpu_t *self) // escrita de E/S
   }
 }
 
+// RETI precisa de cpu_desinterrompe, que tá lá embaixo
+static void cpu_desinterrompe(cpu_t *self);
+
+static void op_RETI(cpu_t *self) // retorno de interrupção
+{
+  cpu_desinterrompe(self);
+}
+
+static void op_CHAMAC(cpu_t *self) // chama função em C
+{
+  if (self->funcaoC == NULL) {
+    self->erro = ERR_OP_INV;
+    return;
+  }
+  // chama a função que foi registrada, com o argumento que foi registrado e o valor de A
+  // coloca o valor de retorno no A
+  self->A = self->funcaoC(self->argC, self->A);
+  self->PC += 1;
+}
+
+static void op_CHAMAS(cpu_t *self) // chamada de sistema
+{
+  self->PC += 1;
+  // causa uma interrupção, para forçar a execução do SO
+  cpu_interrompe(self, IRQ_SISTEMA);
+
+}
+
 
 // ---------------------------------------------------------------------
 // EXECUÇÃO DE UMA INSTRUÇÃO {{{1
@@ -448,6 +488,9 @@ static void executa_a_instrucao(cpu_t *self, int opcode)
     case RET:    op_RET(self);    break;
     case LE:     op_LE(self);     break;
     case ESCR:   op_ESCR(self);   break;
+    case RETI:   op_RETI(self);   break;
+    case CHAMAC: op_CHAMAC(self); break;
+    case CHAMAS: op_CHAMAS(self); break;
     default:     self->erro = ERR_INSTR_INV;
   }
 }

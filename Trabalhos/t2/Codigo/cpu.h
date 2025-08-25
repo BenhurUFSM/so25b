@@ -32,6 +32,11 @@ typedef enum { supervisor, usuario } cpu_modo_t;
 
 #include "memoria.h"
 #include "es.h"
+#include "irq.h"
+
+// tipo da função a ser chamada quando executar a instrução CHAMAC
+typedef int (*func_chamaC_t)(void *argC, int reg_A);
+
 
 // cria uma unidade de execução com acesso à memória e ao
 //   controlador de E/S fornecidos
@@ -52,6 +57,10 @@ void cpu_executa_1(cpu_t *self);
 //   o endereço do tratador de interrupção
 // retorna true se interrupção foi aceita ou false caso contrário
 bool cpu_interrompe(cpu_t *self, irq_t irq);
+
+// define a função a chamar quando executar a instrução CHAMAC
+// e o argumento a passar para ela (normalmente, um ponteiro para o SO)
+void cpu_define_chamaC(cpu_t *self, func_chamaC_t func, void *argC);
 
 // concatena a descrição do estado da CPU no final de str
 void cpu_concatena_descricao(cpu_t *self, char *str);
