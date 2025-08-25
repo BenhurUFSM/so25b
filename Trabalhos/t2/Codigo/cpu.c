@@ -10,6 +10,7 @@
 #include "cpu.h"
 #include "err.h"
 #include "instrucao.h"
+#include "irq.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -54,8 +55,9 @@ cpu_t *cpu_cria(mem_t *mem, es_t *es)
   self->es = es;
 
   // inicializa registradores
-  self->PC = 0;
-  self->A = 0;
+  //   a CPU começa executando no endereço CPU_END_RESET em modo supervisor
+  self->PC = CPU_END_RESET;
+  self->A = IRQ_RESET;
   self->X = 0;
   self->erro = ERR_OK;
   self->complemento = 0;
@@ -140,6 +142,11 @@ void cpu_concatena_descricao(cpu_t *self, char *str)
 // lê um valor da memória
 static bool pega_mem(cpu_t *self, int endereco, int *pval)
 {
+  // não pode acessar memória privilegiada em modo usuário
+  if (self->modo == usuario && endereco <= CPU_END_FIM_PROT) {
+    self->erro = ERR_END_INV;
+    return false;
+  }
   self->erro = mem_le(self->mem, endereco, pval);
   if (self->erro == ERR_OK) return true;
   self->complemento = endereco;
@@ -149,6 +156,11 @@ static bool pega_mem(cpu_t *self, int endereco, int *pval)
 // escreve um valor na memória
 static bool poe_mem(cpu_t *self, int endereco, int val)
 {
+  // não pode acessar memória privilegiada em modo usuário
+  if (self->modo == usuario && endereco <= CPU_END_FIM_PROT) {
+    self->erro = ERR_END_INV;
+    return false;
+  }
   self->erro = mem_escreve(self->mem, endereco, val);
   if (self->erro == ERR_OK) return true;
   self->complemento = endereco;
@@ -449,6 +461,82 @@ void cpu_executa_1(cpu_t *self)
   if (pega_opcode(self, &opcode)) {
     executa_a_instrucao(self, opcode);
   }
+
+  // se a CPU entrou em erro, causa uma interrupção
+  // a menos que a CPU tenha parado, porque a única forma de a CPU entrar nesse
+  //   estado é pela execução da instrução PARA em modo supervisor, e é a forma de
+  //   o SO dizer que não tem mais nada para fazer, e deve-se deixar a CPU dormindo
+  //   até que venha uma interrupção de E/S
+  if (self->erro != ERR_OK && self->erro != ERR_CPU_PARADA) {
+    // se a interrupção não é aceita nesse ponto, temos um problema grave...
+    assert(cpu_interrompe(self, IRQ_ERR_CPU));
+  }
+}
+
+
+// ---------------------------------------------------------------------
+// INTERRUPÇÃO {{{1
+// ---------------------------------------------------------------------
+
+bool cpu_interrompe(cpu_t *self, irq_t irq)
+{
+  // só aceita interrupção em modo usuário ou quando a CPU está dormindo
+  if (self->modo != usuario && self->erro != ERR_CPU_PARADA) return false;
+
+  // Copia o estado da CPU para variáveis locais, para ter certeza que nada será
+  //   alterado por funções auxiliares (poe_mem altera o erro)
+  int PC, A, erro, complemento;
+  PC          = self->PC;
+  A           = self->A;
+  erro        = self->erro;
+  complemento = self->complemento;
+
+  // põe a CPU em modo supervisor, para poder acessar a memória privilegiada
+  // além disso, o tratador de interrupção deve ser executado nesse modo
+  self->modo = supervisor;
+
+  // salva todo o estado interno da CPU
+  //   atenção, nem todos os registradores são salvos pelo hardware
+  poe_mem(self, CPU_END_PC,          PC);
+  poe_mem(self, CPU_END_A,           A);
+  poe_mem(self, CPU_END_erro,        erro);
+  poe_mem(self, CPU_END_complemento, complemento);
+
+  // altera o estado da CPU para ela poder executar o tratador de interrupção
+  // vai iniciar o tratamento da interrupção no endereço CPU_END_TRATADOR,
+  //   com o A contendo o valor da requisição de interrupção e sem erro
+  // se o tratador da interrupção precisar do estado da CPU de antes da
+  //   interrupção, deve acessar o início da memória, onde esse estado foi salvo
+  self->PC   = CPU_END_TRATADOR;
+  self->A    = irq;
+  self->erro = ERR_OK;
+
+  return true;
+}
+
+static void cpu_desinterrompe(cpu_t *self)
+{
+  // a interrupção retornou
+  // recupera o estado da CPU, para que volte a executar o que foi interrompido
+  //   quando a interrupção foi atendida
+
+  // copia primeiro para variáveis locais, para evitar problemas de tipo (pega_mem
+  //   espera int*, mas nem todos os dados são int), e de alteração do estado por
+  //   pega_mem
+  int PC, A, erro, complemento;
+  pega_mem(self, CPU_END_PC,          &PC);
+  pega_mem(self, CPU_END_A,           &A);
+  pega_mem(self, CPU_END_erro,        &erro);
+  pega_mem(self, CPU_END_complemento, &complemento);
+
+  // copia o estado recuperado da memória para o estado interno da CPU
+  //   só recupera pelo hardware o que foi salvo pelo hardware
+  self->PC          = PC;
+  self->A           = A;
+  self->erro        = erro;
+  self->complemento = complemento;
+  // coloca a CPU em modo usuário
+  self->modo        = usuario;
 }
 
 // vim: foldmethod=marker
