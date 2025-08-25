@@ -8,6 +8,9 @@
 
 typedef struct cpu_t cpu_t; // tipo opaco
 
+// os modos de execução da CPU
+typedef enum { supervisor, usuario } cpu_modo_t;
+
 #include "memoria.h"
 #include "es.h"
 

@@ -31,9 +31,12 @@ struct cpu_t {
   // estado interno da CPU
   err_t erro;
   int complemento;
+  cpu_modo_t modo;
   // acesso a dispositivos externos
   mem_t *mem;
   es_t *es;
+  // identificação das instruções privilegiadas
+  bool privilegiadas[N_OPCODE];
 };
 
 
@@ -56,6 +59,13 @@ cpu_t *cpu_cria(mem_t *mem, es_t *es)
   self->X = 0;
   self->erro = ERR_OK;
   self->complemento = 0;
+  self->modo = supervisor;
+
+  // inicializa instruções privilegiadas
+  memset(self->privilegiadas, 0, sizeof(self->privilegiadas)); // todos em false
+  self->privilegiadas[PARA] = true;
+  self->privilegiadas[LE] = true;
+  self->privilegiadas[ESCR] = true;
 
   return self;
 }
@@ -73,7 +83,8 @@ void cpu_destroi(cpu_t *self)
 
 static void formata_registradores(cpu_t *self, char *str)
 {
-  sprintf(str, "PC=%04d A=%06d X=%06d",
+  sprintf(str, "%s PC=%04d A=%06d X=%06d",
+                self->modo == supervisor ? "SUP " : "usu ",
                 self->PC, self->A, self->X);
 }
 
@@ -166,7 +177,13 @@ static bool poe_es(cpu_t *self, int dispositivo, int val)
 // retorna true se ele pode ser executado, ou põe em erro o motivo de não poder
 static bool pega_opcode(cpu_t *self, int *popc)
 {
-  return pega_mem(self, self->PC, popc);
+  // não pode executar se houver erro na leitura da memória
+  if (!pega_mem(self, self->PC, popc)) return false;
+  // pode executar se tiver privilégio para isso
+  if (self->modo == supervisor || !self->privilegiadas[*popc]) return true;
+  // não pode executar instrução privilegiada em modo usuário
+  self->erro = ERR_INSTR_PRIV;
+  return false;
 }
 
 // lê o argumento 1 da instrução no PC
