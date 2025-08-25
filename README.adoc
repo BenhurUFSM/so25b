@@ -43,6 +43,10 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 |  1 | 5ago  | apresentação
 |  2 | 7ago  | introdução (1.1, 1.2)
 |  3 | 12ago | código do t1
+|  4 | 14ago | introdução (1.3)
+|  5 | 19ago | introdução (1.5, 1.6)
+|  6 | 21ago | processos (2.1)
+|  7 | 26ago | sobre o t2
 |===
 
 ### Avaliações
@@ -52,7 +56,7 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 | nome | data  | descrição
 
 | t1   |       | Familiarização com o link:Trabalhos/t1[código].
-| t2   |       | Processos, escalonamento
+| t2   |       | link:Trabalhos/t2[Processos, escalonamento]
 |===
 
 ### Dados individuais
