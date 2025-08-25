@@ -39,8 +39,8 @@ struct cpu_t {
   // identificação das instruções privilegiadas
   bool privilegiadas[N_OPCODE];
   // função e argumento para implementar instrução CHAMAC
-  func_chamaC_t funcaoC;
-  void *argC;
+  func_chamaC_t func_chamaC;
+  void *arg_chamaC;
 };
 
 
@@ -65,7 +65,7 @@ cpu_t *cpu_cria(mem_t *mem, es_t *es)
   self->erro = ERR_OK;
   self->complemento = 0;
   self->modo = supervisor;
-  self->funcaoC = NULL;
+  self->func_chamaC = NULL;
 
   // inicializa instruções privilegiadas
   memset(self->privilegiadas, 0, sizeof(self->privilegiadas)); // todos em false
@@ -84,10 +84,10 @@ void cpu_destroi(cpu_t *self)
   free(self);
 }
 
-void cpu_define_chamaC(cpu_t *self, func_chamaC_t funcaoC, void *argC)
+void cpu_define_chamaC(cpu_t *self, func_chamaC_t func_chamaC, void *arg_chamaC)
 {
-  self->funcaoC = funcaoC;
-  self->argC = argC;
+  self->func_chamaC = func_chamaC;
+  self->arg_chamaC = arg_chamaC;
 }
 
 
@@ -437,13 +437,13 @@ static void op_RETI(cpu_t *self) // retorno de interrupção
 
 static void op_CHAMAC(cpu_t *self) // chama função em C
 {
-  if (self->funcaoC == NULL) {
+  if (self->func_chamaC == NULL) {
     self->erro = ERR_OP_INV;
     return;
   }
   // chama a função que foi registrada, com o argumento que foi registrado e o valor de A
   // coloca o valor de retorno no A
-  self->A = self->funcaoC(self->argC, self->A);
+  self->A = self->func_chamaC(self->arg_chamaC, self->A);
   self->PC += 1;
 }
 

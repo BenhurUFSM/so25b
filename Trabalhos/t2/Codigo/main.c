@@ -12,12 +12,13 @@
 #include "terminal.h"
 #include "es.h"
 #include "dispositivos.h"
+#include "so.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 
 // constantes
-#define MEM_TAM 2000        // tamanho da memória principal
+#define MEM_TAM 10000        // tamanho da memória principal
 
 // estrutura com os componentes do computador simulado
 typedef struct {
@@ -47,10 +48,41 @@ static void registra_terminal(hardware_t *hw, int n_disp, char id_term)
   es_registra_dispositivo(hw->es, n_disp + TERM_TELA_OK,    terminal, TERM_TELA_OK,    terminal_leitura, NULL);
 }
 
+// inicializa a memória ROM com o conteúdo do programa em bios.maq
+static void inicializa_rom(mem_t *mem)
+{
+  // programa para executar na nossa CPU
+  programa_t *prog = prog_cria("bios.maq");
+  if (prog == NULL) {
+    fprintf(stderr, "Erro na leitura da ROM ('bios.maq')\n");
+    exit(1);
+  }
+
+  int end_ini = prog_end_carga(prog);
+  if (end_ini != CPU_END_RESET) {
+    fprintf(stderr, "ROM não inicia no endereço %d (%d)\n", CPU_END_RESET, end_ini);
+    exit(1);
+  }
+  int end_fim = end_ini + prog_tamanho(prog);
+  if (end_fim > CPU_END_FIM_ROM) {
+    fprintf(stderr, "conteúdo da ROM muito grande (%d>%d)\n", end_fim, CPU_END_FIM_ROM);
+    exit(1);
+  }
+
+  for (int end = end_ini; end < end_fim; end++) {
+    if (mem_escreve(mem, end, prog_dado(prog, end)) != ERR_OK) {
+      printf("Erro na carga da memória ROM, endereco %d\n", end);
+      exit(1);
+    }
+  }
+  prog_destroi(prog);
+}
+
 static void cria_hardware(hardware_t *hw)
 {
   // cria a memória
   hw->mem = mem_cria(MEM_TAM);
+  inicializa_rom(hw->mem);
 
   // cria dispositivos de E/S
   hw->console = console_cria();
@@ -89,43 +121,21 @@ static void destroi_hardware(hardware_t *hw)
   mem_destroi(hw->mem);
 }
 
-// inicializa a memória com o conteúdo do programa
-static void init_mem(mem_t *mem, char *nome_do_executavel)
-{
-  // programa para executar na nossa CPU
-  programa_t *prog = prog_cria(nome_do_executavel);
-  if (prog == NULL) {
-    fprintf(stderr, "Erro na leitura do programa '%s'\n", nome_do_executavel);
-    exit(1);
-  }
-
-  int end_ini = prog_end_carga(prog);
-  int end_fim = end_ini + prog_tamanho(prog);
-
-  for (int end = end_ini; end < end_fim; end++) {
-    if (mem_escreve(mem, end, prog_dado(prog, end)) != ERR_OK) {
-      printf("Erro na carga da memória, endereco %d\n", end);
-      exit(1);
-    }
-  }
-  prog_destroi(prog);
-}
-
-int main(int argc, char *argv[])
+int main()
 {
   hardware_t hw;
-  char *nome_do_programa = "ex1.maq";
-  if (argc > 1) nome_do_programa = argv[1];
+  so_t *so;
 
   // cria o hardware
   cria_hardware(&hw);
-  // coloca um programa na memória
-  init_mem(hw.mem, nome_do_programa);
+  // cria o sistema operacional
+  so = so_cria(hw.cpu, hw.mem, hw.es, hw.console);
 
   // executa o laço principal do controlador
   controle_laco(hw.controle);
 
   // destroi tudo
+  so_destroi(so);
   destroi_hardware(&hw);
 }
 
