@@ -1,6 +1,9 @@
 # configuração para o make, para a compilação do simulador e do montador
 # se alterar este arquivo, cuidado para manter os caracteres "tab" no início das linhas de continuação
 
+# a gambiarra pra montar os .asm em endereços diferentes tá em bash
+SHELL = /bin/bash
+
 # opções de compilação
 CC = gcc
 CFLAGS = -Wall -Werror -g

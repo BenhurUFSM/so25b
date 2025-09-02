@@ -149,3 +149,10 @@ Os tempos acima são medidos em número de instruções (medidas pelo relógio).
 
 Gere um relatório de execuções do sistema em diferentes configurações.
 
+
+## Alterações / Respostas
+
+- 2set - alterado o Makefile para explicitar o shell a usar (parece que tava com problemas
+   no WSL)
+- 2set - criado "compila" com os comandos de compilação, caso ainda dê problema com o Makefile
+
