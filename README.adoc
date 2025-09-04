@@ -49,6 +49,7 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 |  7 | 26ago | sobre o t2
 |  8 | 28ago | escalonamento (2.4)
 |  9 |  2set | escalonamento tempo real (7.5)
+| 10 |  4set | threads (2.2) link:Complementos/tst_thr.c[programa exemplo]
 |===
 
 ### Avaliações
