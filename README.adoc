@@ -47,6 +47,8 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 |  5 | 19ago | introdução (1.5, 1.6)
 |  6 | 21ago | processos (2.1)
 |  7 | 26ago | sobre o t2
+|  8 | 28ago | escalonamento (2.4)
+|  9 |  2set | escalonamento tempo real (7.5)
 |===
 
 ### Avaliações
