@@ -6,7 +6,7 @@
 // mostra também alguns problemas de cache em multiprocessadores
 
 // para medir o tempo de execução do programa, dá para executar com time:
-//   time ./thr
+//   time ./tst_thr
 
 #include <stdio.h>
 #include <pthread.h>
@@ -21,23 +21,22 @@
 //   efeitos de falso compartilhamento ou de conflito de cache
 #define ESPACO 20
 
-typedef int num_t;
 typedef struct {
   // variável que vai acumular as somas
-  num_t soma;
+  int soma;
   // variável para simular outros dados
-  num_t y[ESPACO];
+  int y[ESPACO];
 } dado_t;
 
 // uma estrutura para cada thread
 dado_t dados[NT];
 
 // variável para guardar o somatório geral
-num_t total;
+int total;
 
 // função que realiza o cálculo de cada valor a ser somado
 //   vai ser chamada muitas vezes
-num_t calc() {
+int calc() {
   return 1;
 }
 
@@ -57,7 +56,7 @@ void *f(void *ptr)
 
 int main()
 {
-  pthread_t thr[NT];
+  pthread_t thr[NT]; // descritores das threads
   total = 0;
 
   // cria cada thread, para executar a função f, passando um ptr para dado_t
