@@ -10,7 +10,6 @@
 #include "cpu.h"
 #include "err.h"
 #include "instrucao.h"
-#include "irq.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -34,7 +33,7 @@ struct cpu_t {
   int complemento;
   cpu_modo_t modo;
   // acesso a dispositivos externos
-  mem_t *mem;
+  mmu_t *mmu;
   es_t *es;
   // identificação das instruções privilegiadas
   bool privilegiadas[N_OPCODE];
@@ -48,13 +47,13 @@ struct cpu_t {
 // CRIAÇÃO {{{1
 // ---------------------------------------------------------------------
 
-cpu_t *cpu_cria(mem_t *mem, es_t *es)
+cpu_t *cpu_cria(mmu_t *mmu, es_t *es)
 {
   cpu_t *self;
   self = malloc(sizeof(*self));
   assert(self != NULL);
 
-  self->mem = mem;
+  self->mmu = mmu;
   self->es = es;
 
   // inicializa registradores
@@ -80,7 +79,7 @@ cpu_t *cpu_cria(mem_t *mem, es_t *es)
 
 void cpu_destroi(cpu_t *self)
 {
-  // quem criou memória e e/s que destrua!
+  // quem criou mmu e e/s que destrua!
   free(self);
 }
 
@@ -105,7 +104,7 @@ static void formata_registradores(cpu_t *self, char *str)
 static void formata_instrucao(cpu_t *self, char *str)
 {
   int opcode;
-  if (mem_le(self->mem, self->PC, &opcode) != ERR_OK) {
+  if (mmu_le(self->mmu, self->PC, &opcode, self->modo) != ERR_OK) {
     strcpy(str, " PC inválido");
     return;
   }
@@ -114,7 +113,7 @@ static void formata_instrucao(cpu_t *self, char *str)
     // imprime argumento da instrução, se houver
   } else {
     int A1;
-    mem_le(self->mem, self->PC + 1, &A1);
+    mmu_le(self->mmu, self->PC + 1, &A1, self->modo);
     sprintf(str, " %02d %s %d", opcode, instrucao_nome(opcode), A1);
   }
 }
@@ -154,12 +153,8 @@ void cpu_concatena_descricao(cpu_t *self, char *str)
 // lê um valor da memória
 static bool pega_mem(cpu_t *self, int endereco, int *pval)
 {
-  // não pode acessar memória privilegiada em modo usuário
-  if (self->modo == usuario && endereco <= CPU_END_FIM_PROT) {
-    self->erro = ERR_END_INV;
-    return false;
-  }
-  self->erro = mem_le(self->mem, endereco, pval);
+  // não tem que testar endereços, é tarefa da mmu
+  self->erro = mmu_le(self->mmu, endereco, pval, self->modo);
   if (self->erro == ERR_OK) return true;
   self->complemento = endereco;
   return false;
@@ -168,12 +163,8 @@ static bool pega_mem(cpu_t *self, int endereco, int *pval)
 // escreve um valor na memória
 static bool poe_mem(cpu_t *self, int endereco, int val)
 {
-  // não pode acessar memória privilegiada em modo usuário
-  if (self->modo == usuario && endereco <= CPU_END_FIM_PROT) {
-    self->erro = ERR_END_INV;
-    return false;
-  }
-  self->erro = mem_escreve(self->mem, endereco, val);
+  // não tem que testar endereços, é tarefa da mmu
+  self->erro = mmu_escreve(self->mmu, endereco, val, self->modo);
   if (self->erro == ERR_OK) return true;
   self->complemento = endereco;
   return false;
@@ -535,6 +526,7 @@ bool cpu_interrompe(cpu_t *self, irq_t irq)
   complemento = self->complemento;
 
   // põe a CPU em modo supervisor, para poder acessar a memória privilegiada
+  //   e salvar o estado do processador em endereços físicos e não lógicos
   // além disso, o tratador de interrupção deve ser executado nesse modo
   self->modo = supervisor;
 

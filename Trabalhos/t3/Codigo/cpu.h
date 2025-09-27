@@ -30,17 +30,17 @@ typedef enum { supervisor, usuario } cpu_modo_t;
 // endereço limite da memória protegida (não acessável em modo usuário)
 #define CPU_END_FIM_PROT    99
 
-#include "memoria.h"
 #include "es.h"
 #include "irq.h"
+#include "mmu.h"
 
 // tipo da função a ser chamada quando executar a instrução CHAMAC
 typedef int (*func_chamaC_t)(void *argC, int reg_A);
 
 
-// cria uma unidade de execução com acesso à memória e ao
+// cria uma unidade de execução com acesso à MMU e ao
 //   controlador de E/S fornecidos
-cpu_t *cpu_cria(mem_t *mem, es_t *es);
+cpu_t *cpu_cria(mmu_t *mmu, es_t *es);
 
 // destrói a unidade de execução
 void cpu_destroi(cpu_t *self);
