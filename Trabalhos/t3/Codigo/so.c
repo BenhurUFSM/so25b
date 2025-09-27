@@ -26,6 +26,19 @@
 // intervalo entre interrupções do relógio
 #define INTERVALO_INTERRUPCAO 50   // em instruções executadas
 
+// t3: a interface de algumas funções que manipulam memória teve que ser alterada,
+//   para incluir o processo ao qual elas se referem. Para isso, é necessário um
+//   tipo de dados para identificar um processo. Neste código, não tem processos
+//   implementados, e não tem um tipo para isso. Foi usado o tipo int.
+//   É necessário também um valor para representar um processo inexistente.
+//   Foi usado o valor -1. Altere para o seu tipo, ou substitua os usos de
+//   processo_t e NENHUM_PROCESSO para o seu tipo.
+//   ALGUM_PROCESSO serve para representar um processo que não é NENHUM. Só tem
+//   algum sentido enquanto não tem implementação de processos.
+typedef int processo_t;
+#define NENHUM_PROCESSO -1
+#define ALGUM_PROCESSO 0
+
 struct so_t {
   cpu_t *cpu;
   mem_t *mem;
@@ -48,10 +61,14 @@ struct so_t {
 static int so_trata_interrupcao(void *argC, int reg_A);
 
 // funções auxiliares
-// carrega o programa contido no arquivo na memória do processador; retorna end. inicial
-static int so_carrega_programa(so_t *self, char *nome_do_executavel);
-// copia para str da memória do processador, até copiar um 0 (retorna true) ou tam bytes
-static bool copia_str_da_mem(int tam, char str[tam], mem_t *mem, int ender);
+// no t3, foi adicionado o 'processo' aos argumentos dessas funções 
+// carrega o programa contido no arquivo para memória virtual de um processo
+// retorna o endereço virtual inicial de execução
+static int so_carrega_programa(so_t *self, processo_t processo,
+                               char *nome_do_executavel);
+// copia para str da memória do processo, até copiar um 0 (retorna true) ou tam bytes
+static bool so_copia_str_do_processo(so_t *self, int tam, char str[tam],
+                                     int end_virt, processo_t processo);
 
 
 // ---------------------------------------------------------------------
@@ -79,7 +96,6 @@ so_t *so_cria(cpu_t *cpu, mem_t *mem, mmu_t *mmu,
   // t3: com processos, essa tabela não existiria, teria uma por processo, que
   //     deve ser colocada na MMU quando o processo é despachado para execução
   self->tabpag_global = tabpag_cria();
-
   mmu_define_tabpag(self->mmu, self->tabpag_global);
 
   return self;
@@ -233,7 +249,7 @@ static void so_trata_reset(so_t *self)
   //   de interrupção (escrito em asm). esse programa deve conter a
   //   instrução CHAMAC, que vai chamar so_trata_interrupcao (como
   //   foi definido na inicialização do SO)
-  int ender = so_carrega_programa(self, "trata_int.maq");
+  int ender = so_carrega_programa(self, NENHUM_PROCESSO, "trata_int.maq");
   if (ender != CPU_END_TRATADOR) {
     console_printf("SO: problema na carga do programa de tratamento de interrupção");
     self->erro_interno = true;
@@ -256,8 +272,9 @@ static void so_trata_reset(so_t *self)
   //   deste código
 
   // coloca o programa init na memória
-  ender = so_carrega_programa(self, "init.maq");
-  if (ender != 100) {
+  processo_t processo = ALGUM_PROCESSO; // deveria inicializar um processo...
+  ender = so_carrega_programa(self, processo, "init.maq");
+  if (ender == -1) {
     console_printf("SO: problema na carga do programa inicial");
     self->erro_interno = true;
     return;
@@ -432,15 +449,18 @@ static void so_chamada_cria_proc(so_t *self)
   // ainda sem suporte a processos, carrega programa e passa a executar ele
   // quem chamou o sistema não vai mais ser executado, coitado!
   // t2: deveria criar um novo processo
+  // t3: identifica direito esses processos
+  processo_t processo_criador = ALGUM_PROCESSO;
+  processo_t processo_criado = ALGUM_PROCESSO;
 
   // em X está o endereço onde está o nome do arquivo
   int ender_proc;
   // t2: deveria ler o X do descritor do processo criador
   ender_proc = self->regX;
   char nome[100];
-  if (copia_str_da_mem(100, nome, self->mem, ender_proc)) {
-    int ender_carga = so_carrega_programa(self, nome);
-    if (ender_carga > 0) {
+  if (so_copia_str_do_processo(self, 100, nome, ender_proc, processo_criador)) {
+    int ender_carga = so_carrega_programa(self, processo_criado, nome);
+    if (ender_carga != -1) {
       // t2: deveria escrever no PC do descritor do processo criado
       self->regPC = ender_carga;
       return;
@@ -477,10 +497,14 @@ static void so_chamada_espera_proc(so_t *self)
 // ---------------------------------------------------------------------
 
 // carrega o programa na memória
+// se processo for NENHUM_PROCESSO, carrega o programa na memória física
+//   senão, carrega na memória virtual do processo
 // retorna o endereço de carga ou -1
-static int so_carrega_programa(so_t *self, char *nome_do_executavel)
+static int so_carrega_programa(so_t *self, processo_t processo,
+                               char *nome_do_executavel)
 {
-  // programa para executar na nossa CPU
+  console_printf("SO: carga de '%s'", nome_do_executavel);
+
   programa_t *prog = prog_cria(nome_do_executavel);
   if (prog == NULL) {
     console_printf("Erro na leitura do programa '%s'\n", nome_do_executavel);
@@ -517,15 +541,22 @@ static int so_carrega_programa(so_t *self, char *nome_do_executavel)
 // ACESSO À MEMÓRIA DOS PROCESSOS {{{1
 // ---------------------------------------------------------------------
 
-// copia uma string da memória do simulador para o vetor str.
+// copia uma string da memória do processo para o vetor str.
 // retorna false se erro (string maior que vetor, valor não char na memória,
 //   erro de acesso à memória)
-// t2: deveria verificar se a memória pertence ao processo
-static bool copia_str_da_mem(int tam, char str[tam], mem_t *mem, int ender)
+// O endereço é um endereço virtual de um processo.
+// t3: Com memória virtual, cada valor do espaço de endereçamento do processo
+//   pode estar em memória principal ou secundária (e tem que achar onde)
+static bool so_copia_str_do_processo(so_t *self, int tam, char str[tam],
+                                     int end_virt, processo_t processo)
 {
+  if (processo == NENHUM_PROCESSO) return false;
   for (int indice_str = 0; indice_str < tam; indice_str++) {
     int caractere;
-    if (mem_le(mem, ender + indice_str, &caractere) != ERR_OK) {
+    // não tem memória virtual implementada, posso usar a mmu para traduzir
+    //   os endereços e acessar a memória, porque todo o conteúdo do processo
+    //   está na memória principal, e só temos uma tabela de páginas
+    if (mmu_le(self->mmu, end_virt + indice_str, &caractere, usuario) != ERR_OK) {
       return false;
     }
     if (caractere < 0 || caractere > 255) {
