@@ -50,6 +50,9 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 |  8 | 28ago | escalonamento (2.4)
 |  9 |  2set | escalonamento tempo real (7.5)
 | 10 |  4set | threads (2.2) link:Complementos/tst_thr.c[programa exemplo]
+| 11 |  9set | comunicação entre processos (cond. corrida, região crítica, excl. mútua) (2.3.1-3)
+| 12 | 11set | comunicação entre processos (semáforos, mutex, monitor; prod. cons.) (2.3.4-7)
+| 13 | 16set | comunicação entre processos (mensagens, barreiras, problemas clássicos) (2.4.8-9, 2.5)
 |===
 
 ### Avaliações
