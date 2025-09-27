@@ -13,6 +13,7 @@
 #include "irq.h"
 #include "memoria.h"
 #include "programa.h"
+#include "tabpag.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -35,6 +36,11 @@ struct so_t {
 
   int regA, regX, regPC, regERRO, regComplemento; // cópia do estado da CPU
   // t2: tabela de processos, processo corrente, pendências, etc
+
+  // uma tabela de páginas para poder usar a MMU
+  // t3: com processos, não tem esta tabela global, tem que ter uma para
+  //     cada processo
+  tabpag_t *tabpag_global;
 };
 
 
@@ -68,6 +74,13 @@ so_t *so_cria(cpu_t *cpu, mem_t *mem, mmu_t *mmu,
   // quando a CPU executar uma instrução CHAMAC, deve chamar a função
   //   so_trata_interrupcao, com primeiro argumento um ptr para o SO
   cpu_define_chamaC(self->cpu, so_trata_interrupcao, self);
+
+  // inicializa a tabela de páginas global, e entrega ela para a MMU
+  // t3: com processos, essa tabela não existiria, teria uma por processo, que
+  //     deve ser colocada na MMU quando o processo é despachado para execução
+  self->tabpag_global = tabpag_cria();
+
+  mmu_define_tabpag(self->mmu, self->tabpag_global);
 
   return self;
 }
@@ -482,6 +495,16 @@ static int so_carrega_programa(so_t *self, char *nome_do_executavel)
       console_printf("Erro na carga da memória, endereco %d\n", end);
       return -1;
     }
+  }
+
+  // programa a tabela de páginas para traduzir cada página carregada para o quadro
+  //   correspondente (por enquanto, o quadro é igual à página)
+  int pagina_ini = end_ini / TAM_PAGINA;
+  int pagina_fim = end_fim / TAM_PAGINA;
+  for (int pagina = pagina_ini; pagina <= pagina_fim; pagina++) {
+    int quadro = pagina;
+    tabpag_define_quadro(self->tabpag_global, pagina, quadro);
+    quadro++;
   }
 
   prog_destroi(prog);
