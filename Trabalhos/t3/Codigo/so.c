@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------
 
 #include "so.h"
+#include "cpu.h"
 #include "dispositivos.h"
 #include "err.h"
 #include "irq.h"
@@ -25,6 +26,18 @@
 
 // intervalo entre interrupções do relógio
 #define INTERVALO_INTERRUPCAO 50   // em instruções executadas
+
+// Não tem processos nem memória virtual, mas é preciso usar a paginação,
+//   pelo menos para implementar relocação, já que os programas estão sendo
+//   todos montados para serem executados no endereço 0 e o endereço 0
+//   físico é usado pelo hardware nas interrupções.
+// Os programas estão sendo carregados no início de um quadro, e usam quantos
+//   quadros forem necessárias. Para isso a variável quadro_livre contém
+//   o número do primeiro quadro da memória principal que ainda não foi usado.
+//   Na carga do processo, a tabela de páginas (deveria ter uma por processo,
+//   mas não tem processo) é alterada para que o endereço virtual 0 resulte
+//   no quadro onde o programa foi carregado. Com isso, o programa carregado
+//   é acessível, mas o acesso ao anterior é perdido.
 
 // t3: a interface de algumas funções que manipulam memória teve que ser alterada,
 //   para incluir o processo ao qual elas se referem. Para isso, é necessário um
@@ -50,6 +63,10 @@ struct so_t {
   int regA, regX, regPC, regERRO, regComplemento; // cópia do estado da CPU
   // t2: tabela de processos, processo corrente, pendências, etc
 
+  // primeiro quadro da memória que está livre (quadros anteriores estão ocupados)
+  // t3: com memória virtual, o controle de memória livre e ocupada deve ser mais
+  //     completo que isso
+  int quadro_livre;
   // uma tabela de páginas para poder usar a MMU
   // t3: com processos, não tem esta tabela global, tem que ter uma para
   //     cada processo
@@ -260,6 +277,12 @@ static void so_trata_reset(so_t *self)
     console_printf("SO: problema na programação do timer");
     self->erro_interno = true;
   }
+
+  // define o primeiro quadro livre de memória como o seguinte àquele que
+  //   contém o endereço final da memória protegida (que não podem ser usadas
+  //   por programas de usuário)
+  // t3: o controle de memória livre deve ser mais aprimorado que isso  
+  self->quadro_livre = CPU_END_FIM_PROT / TAM_PAGINA + 1;
 
   // t2: deveria criar um processo para o init, e inicializar o estado do
   //   processador para esse processo com os registradores zerados, exceto
@@ -496,6 +519,12 @@ static void so_chamada_espera_proc(so_t *self)
 // CARGA DE PROGRAMA {{{1
 // ---------------------------------------------------------------------
 
+// funções auxiliares
+static int so_carrega_programa_na_memoria_fisica(so_t *self, programa_t *programa);
+static int so_carrega_programa_na_memoria_virtual(so_t *self,
+                                                  programa_t *programa,
+                                                  processo_t processo);
+
 // carrega o programa na memória
 // se processo for NENHUM_PROCESSO, carrega o programa na memória física
 //   senão, carrega na memória virtual do processo
@@ -505,35 +534,81 @@ static int so_carrega_programa(so_t *self, processo_t processo,
 {
   console_printf("SO: carga de '%s'", nome_do_executavel);
 
-  programa_t *prog = prog_cria(nome_do_executavel);
-  if (prog == NULL) {
+  programa_t *programa = prog_cria(nome_do_executavel);
+  if (programa == NULL) {
     console_printf("Erro na leitura do programa '%s'\n", nome_do_executavel);
     return -1;
   }
 
-  int end_ini = prog_end_carga(prog);
-  int end_fim = end_ini + prog_tamanho(prog);
+  int end_carga;
+  if (processo == NENHUM_PROCESSO) {
+    end_carga = so_carrega_programa_na_memoria_fisica(self, programa);
+  } else {
+    end_carga = so_carrega_programa_na_memoria_virtual(self, programa, processo);
+  }
+
+  prog_destroi(programa);
+  return end_carga;
+}
+
+static int so_carrega_programa_na_memoria_fisica(so_t *self, programa_t *programa)
+{
+  int end_ini = prog_end_carga(programa);
+  int end_fim = end_ini + prog_tamanho(programa);
 
   for (int end = end_ini; end < end_fim; end++) {
-    if (mem_escreve(self->mem, end, prog_dado(prog, end)) != ERR_OK) {
+    if (mem_escreve(self->mem, end, prog_dado(programa, end)) != ERR_OK) {
       console_printf("Erro na carga da memória, endereco %d\n", end);
       return -1;
     }
   }
 
-  // programa a tabela de páginas para traduzir cada página carregada para o quadro
-  //   correspondente (por enquanto, o quadro é igual à página)
-  int pagina_ini = end_ini / TAM_PAGINA;
-  int pagina_fim = end_fim / TAM_PAGINA;
-  for (int pagina = pagina_ini; pagina <= pagina_fim; pagina++) {
-    int quadro = pagina;
-    tabpag_define_quadro(self->tabpag_global, pagina, quadro);
-    quadro++;
-  }
-
-  prog_destroi(prog);
-  console_printf("SO: carga de '%s' em %d-%d", nome_do_executavel, end_ini, end_fim);
+  console_printf("SO: carga na memória física %d-%d", end_ini, end_fim);
   return end_ini;
+}
+
+static int so_carrega_programa_na_memoria_virtual(so_t *self,
+                                                  programa_t *programa,
+                                                  processo_t processo)
+{
+  // t3: isto tá furado...
+  // está simplesmente lendo para o próximo quadro que nunca foi ocupado,
+  //   nem testa se tem memória disponível
+  // com memória virtual, a forma mais simples de implementar a carga de um
+  //   programa é carregá-lo para a memória secundária, e mapear todas as páginas
+  //   da tabela de páginas do processo como inválidas. Assim, as páginas serão
+  //   colocadas na memória principal por demanda. Para simplificar ainda mais, a
+  //   memória secundária pode ser alocada da forma como a principal está sendo
+  //   alocada aqui (sem reuso)
+  int end_virt_ini = prog_end_carga(programa);
+  // o código abaixo só funciona se o programa iniciar no início de uma página
+  if ((end_virt_ini % TAM_PAGINA) != 0) return -1;
+  int end_virt_fim = end_virt_ini + prog_tamanho(programa) - 1;
+  int pagina_ini = end_virt_ini / TAM_PAGINA;
+  int pagina_fim = end_virt_fim / TAM_PAGINA;
+  int n_paginas = pagina_fim - pagina_ini + 1;
+  int quadro_ini = self->quadro_livre;
+  int quadro_fim = quadro_ini + n_paginas - 1;
+  // mapeia as páginas nos quadros
+  for (int i = 0; i < n_paginas; i++) {
+    tabpag_define_quadro(self->tabpag_global, pagina_ini + i, quadro_ini + i);
+  }
+  self->quadro_livre = quadro_fim + 1;
+
+  // carrega o programa na memória principal
+  int end_fis_ini = quadro_ini * TAM_PAGINA;
+  int end_fis = end_fis_ini;
+  for (int end_virt = end_virt_ini; end_virt <= end_virt_fim; end_virt++) {
+    if (mem_escreve(self->mem, end_fis, prog_dado(programa, end_virt)) != ERR_OK) {
+      console_printf("Erro na carga da memória, end virt %d fís %d\n", end_virt,
+                     end_fis);
+      return -1;
+    }
+    end_fis++;
+  }
+  console_printf("SO: carga na memória virtual V%d-%d F%d-%d npag=%d",
+                 end_virt_ini, end_virt_fim, end_fis_ini, end_fis - 1, n_paginas);
+  return end_virt_ini;
 }
 
 

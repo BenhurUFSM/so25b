@@ -12,18 +12,20 @@ gcc -Wall -Werror -g   -c -o programa.o programa.c
 gcc -Wall -Werror -g   -c -o controle.o controle.c
 gcc -Wall -Werror -g   -c -o so.o so.c
 gcc -Wall -Werror -g   -c -o irq.o irq.c
-gcc   main.o cpu.o es.o memoria.o relogio.o console.o terminal.o tela_curses.o instrucao.o err.o programa.o controle.o so.o irq.o  -lcurses -o main
+gcc -Wall -Werror -g   -c -o mmu.o mmu.c
+gcc -Wall -Werror -g   -c -o tabpag.o tabpag.c
+gcc   main.o cpu.o es.o memoria.o relogio.o console.o terminal.o tela_curses.o instrucao.o err.o programa.o controle.o so.o irq.o mmu.o tabpag.o  -lcurses -o main
 gcc -Wall -Werror -g   -c -o montador.o montador.c
 gcc   montador.o instrucao.o err.o  -lcurses -o montador
-./montador -e 0 bios.asm
-./montador -e 60 trata_int.asm
-./montador -e 100 init.asm
-./montador -e 1000 ex1.asm
-./montador -e 2000 ex2.asm
-./montador -e 3000 ex3.asm
-./montador -e 4000 ex4.asm
-./montador -e 5000 ex5.asm
-./montador -e 6000 ex6.asm
-./montador -e 7000 p1.asm
-./montador -e 8000 p2.asm
-./montador -e 9000 p3.asm
+./montador -e 0 bios.asm > bios.maq
+./montador -e 60 trata_int.asm > trata_int.maq
+./montador -e 0 init.asm > init.maq
+./montador -e 0 ex1.asm > ex1.maq
+./montador -e 0 ex2.asm > ex2.maq
+./montador -e 0 ex3.asm > ex3.maq
+./montador -e 0 ex4.asm > ex4.maq
+./montador -e 0 ex5.asm > ex5.maq
+./montador -e 0 ex6.asm > ex6.maq
+./montador -e 0 p1.asm > p1.maq
+./montador -e 0 p2.asm > p2.maq
+./montador -e 0 p3.asm > p3.maq
