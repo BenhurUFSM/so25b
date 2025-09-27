@@ -53,6 +53,9 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 | 11 |  9set | comunicação entre processos (cond. corrida, região crítica, excl. mútua) (2.3.1-3)
 | 12 | 11set | comunicação entre processos (semáforos, mutex, monitor; prod. cons.) (2.3.4-7)
 | 13 | 16set | comunicação entre processos (mensagens, barreiras, problemas clássicos) (2.4.8-9, 2.5)
+| 14 | 18set | gerenciamento de memória
+| 15 | 23set | paginação
+| 16 | 25set | algoritmos de substituição de páginas
 |===
 
 ### Avaliações
@@ -63,6 +66,7 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 
 | t1   |       | Familiarização com o link:Trabalhos/t1[código].
 | t2   |       | link:Trabalhos/t2[Processos, escalonamento]
+| t3   |       | link:Trabalhos/t3[Memória virtual]
 |===
 
 ### Dados individuais
