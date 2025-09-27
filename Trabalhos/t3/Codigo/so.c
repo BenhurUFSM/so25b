@@ -32,7 +32,7 @@ struct so_t {
   console_t *console;
   bool erro_interno;
 
-  int regA, regX, regPC, regERRO; // cópia do estado da CPU
+  int regA, regX, regPC, regERRO, regComplemento; // cópia do estado da CPU
   // t2: tabela de processos, processo corrente, pendências, etc
 };
 
@@ -129,6 +129,7 @@ static void so_salva_estado_da_cpu(so_t *self)
   if (mem_le(self->mem, CPU_END_A, &self->regA) != ERR_OK
       || mem_le(self->mem, CPU_END_PC, &self->regPC) != ERR_OK
       || mem_le(self->mem, CPU_END_erro, &self->regERRO) != ERR_OK
+      || mem_le(self->mem, CPU_END_complemento, &self->regComplemento) != ERR_OK
       || mem_le(self->mem, 59, &self->regX)) {
     console_printf("SO: erro na leitura dos registradores");
     self->erro_interno = true;
@@ -261,7 +262,8 @@ static void so_trata_irq_err_cpu(so_t *self)
   //   no descritor do processo corrente, e reagir de acordo com esse erro
   //   (em geral, matando o processo)
   err_t err = self->regERRO;
-  console_printf("SO: IRQ não tratada -- erro na CPU: %s", err_nome(err));
+  console_printf("SO: IRQ não tratada -- erro na CPU: %s (%d)",
+                 err_nome(err), self->regComplemento);
   self->erro_interno = true;
 }
 
