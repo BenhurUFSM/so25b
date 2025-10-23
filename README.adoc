@@ -56,6 +56,14 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 | 14 | 18set | gerenciamento de memória (3-3.2)
 | 15 | 23set | memória virtual: paginação (3.3)
 | 16 | 25set | algoritmos de substituição de páginas (3.4)
+| 17 | 30set | memória virtual: outros assuntos (3.5-7)
+| 18 |  2out | deadlocks: conceito, modelagem, detecção (6.1-4)
+| 19 |  7out | deadlocks: prevenção, etc (6.5-7)
+| 20 |  9out | sistemas de arquivos: introdução, inferface (4.1-2)
+| 21 | 14out | sistemas de arquivos: implementação (4.3)
+| 22 | 16out | sistemas de arquivos: gerenciamento, otimização (4.4)
+| 23 | 21out | entrada e saída (5.1-3)
+| 24 | 23out | entrada e saída: exemplos de dispositivos (5.4-6)
 |===
 
 ### Avaliações
