@@ -75,6 +75,9 @@ Ver https://www.ufsm.br/ementario/disciplinas/ELC1080/[aqui].
 | t1   |       | Familiarização com o link:Trabalhos/t1[código].
 | t2   |       | link:Trabalhos/t2[Processos, escalonamento]
 | t3   |       | link:Trabalhos/t3[Memória virtual]
+|  \*  | 24nov | entrega final
+|      | 24n-1dez | entrevistas presenciais individuais
+|      |  9dez | exame
 |===
 
 ### Dados individuais
